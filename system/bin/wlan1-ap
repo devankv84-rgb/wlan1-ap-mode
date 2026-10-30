@@ -10,7 +10,6 @@ DNSMASQ_BIN="/system/bin/dnsmasq"
 
 init_configs() {
     mkdir -p "$CONFIG_DIR"
-    mkdir -p /var/run
 
     if [ ! -f "$HOSTAPD_CONF" ]; then
         cat << 'CONF' > "$HOSTAPD_CONF"
@@ -22,7 +21,7 @@ channel=6
 auth_algs=1
 ignore_broadcast_ssid=0
 wpa=2
-wpa_passphrase=1234567890
+wpa_passphrase=your_secure_password
 wpa_key_mgmt=WPA-PSK
 rsn_pairwise=CCMP
 CONF
@@ -35,7 +34,7 @@ dhcp-range=192.168.42.10,192.168.42.50,12h
 dhcp-option=3,192.168.42.1
 dhcp-option=6,8.8.8.8
 bind-interfaces
-pid-file=/var/run/dnsmasq.pid
+pid-file=/data/local/tmp/wlan1_ap/dnsmasq.pid
 CONF
     fi
 }
@@ -66,9 +65,6 @@ start_ap() {
     iptables -t nat -A POSTROUTING -o "$UPSTREAM" -j MASQUERADE
     iptables -A FORWARD -i "$UPSTREAM" -o wlan1 -m state --state RELATED,ESTABLISHED -j ACCEPT
     iptables -A FORWARD -i wlan1 -o "$UPSTREAM" -j ACCEPT
-
-    # Ensure runtime directory for dnsmasq pid exists
-    mkdir -p /var/run
 
     # Start DNSMASQ
     pkill dnsmasq 2>/dev/null
