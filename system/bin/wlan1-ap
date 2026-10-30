@@ -4,9 +4,14 @@ CONFIG_DIR="/data/local/tmp/wlan1_ap"
 HOSTAPD_CONF="$CONFIG_DIR/hostapd.conf"
 DNSMASQ_CONF="$CONFIG_DIR/dnsmasq.conf"
 
+# Define paths to binaries in user-writable space
+HOSTAPD_BIN="/data/local/tmp/hostapd"
+DNSMASQ_BIN="/data/local/tmp/dnsmasq"
+
 init_configs() {
     mkdir -p "$CONFIG_DIR"
-    
+    mkdir -p /var/run
+
     if [ ! -f "$HOSTAPD_CONF" ]; then
         cat << 'CONF' > "$HOSTAPD_CONF"
 interface=wlan1
@@ -17,7 +22,7 @@ channel=6
 auth_algs=1
 ignore_broadcast_ssid=0
 wpa=2
-wpa_passphrase=1234567890
+wpa_passphrase=your_secure_password
 wpa_key_mgmt=WPA-PSK
 rsn_pairwise=CCMP
 CONF
@@ -30,6 +35,7 @@ dhcp-range=192.168.42.10,192.168.42.50,12h
 dhcp-option=3,192.168.42.1
 dhcp-option=6,8.8.8.8
 bind-interfaces
+pid-file=/data/local/tmp/wlan1_ap/dnsmasq.pid
 CONF
     fi
 }
@@ -38,41 +44,49 @@ start_ap() {
     echo "[+] Initializing wlan1 Access Point..."
     init_configs
 
-    # Bring down interface and set mode
+    # Ensure binaries are present in /data/local/tmp/ and executable
+    if [ ! -f "$HOSTAPD_BIN" ] || [ ! -f "$DNSMASQ_BIN" ]; then
+        echo "[!] Binaries missing in /data/local/tmp/. Copying from system path..."
+        cp /system/bin/hostapd "$HOSTAPD_BIN" 2>/dev/null
+        cp /system/bin/dnsmasq "$DNSMASQ_BIN" 2>/dev/null
+        chmod 755 "$HOSTAPD_BIN" "$DNSMASQ_BIN"
+    fi
+
+    # Bring down interface and set AP mode
     ip link set wlan1 down 2>/dev/null
     iw dev wlan1 set type ap
     ip link set wlan1 up
     ip addr add 192.168.42.1/24 dev wlan1 2>/dev/null
 
-    # Enable IP forwarding
+    # Enable IPv4 forwarding
     echo 1 > /proc/sys/net/ipv4/ip_forward
 
-    # Detect active internet interface (wlan0 or cellular/rmnet)
+    # Detect upstream internet interface
     UPSTREAM="wlan0"
     if ip route | grep -q "dev rmnet"; then
         UPSTREAM=$(ip route | grep default | awk '{print $5}' | head -n1)
     fi
     echo "[+] Upstream internet interface: $UPSTREAM"
 
-    # Set up NAT/Routing rules
+    # Set up NAT / IPTables rules
     iptables -F
     iptables -t nat -F
     iptables -t nat -A POSTROUTING -o "$UPSTREAM" -j MASQUERADE
     iptables -A FORWARD -i "$UPSTREAM" -o wlan1 -m state --state RELATED,ESTABLISHED -j ACCEPT
     iptables -A FORWARD -i wlan1 -o "$UPSTREAM" -j ACCEPT
 
-    # Start DNSMASQ
+    # Start DNSMASQ from /data/local/tmp/
     pkill dnsmasq 2>/dev/null
-    dnsmasq -C "$DNSMASQ_CONF" &
+    "$DNSMASQ_BIN" -C "$DNSMASQ_CONF" &
     echo "[+] DHCP server started."
 
-    # Start HOSTAPD
-    echo "[+] Launching hostapd... Press Ctrl+C to stop or run 'wlan1-ap stop' in another terminal."
-    hostapd "$HOSTAPD_CONF"
+    # Launch HOSTAPD from /data/local/tmp/
+    echo "[+] Launching hostapd..."
+    "$HOSTAPD_BIN" "$HOSTAPD_CONF"
 }
 
 stop_ap() {
-    echo "[-] Stopping wlan1 AP and tearing down interfaces..."
+    echo "[-] Stopping wlan1 AP..."
     pkill hostapd 2>/dev/null
     pkill dnsmasq 2>/dev/null
     ip link set wlan1 down 2>/dev/null
