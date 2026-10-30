@@ -12,10 +12,27 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      - name: Create Binaries Directory
+        run: mkdir -p system/bin
+
+      - name: Download ARM64 Hostapd and Dnsmasq Binaries
+        run: |
+          # Example source: downloading static ARM64 binaries or extracting them from a known public repository/release
+          # (Replace these URLs with your preferred trusted source or your own binary storage release links)
+          
+          echo "Downloading dnsmasq..."
+          curl -L -o system/bin/dnsmasq https://github.com/the-tcpdump-group/tcpdump/releases/download/v4.93.0/dnsmasq-arm64 || \
+          curl -L -o system/bin/dnsmasq https://raw.githubusercontent.com/EXALAB/AnLinux-Resources/master/Binaries/ARM64/dnsmasq
+          
+          echo "Downloading hostapd..."
+          curl -L -o system/bin/hostapd https://raw.githubusercontent.com/EXALAB/AnLinux-Resources/master/Binaries/ARM64/hostapd
+
       - name: Set Executable Permissions
         run: |
           chmod +x service.sh
           chmod +x system/bin/wlan1-ap
+          chmod +x system/bin/hostapd
+          chmod +x system/bin/dnsmasq
 
       - name: Package Magisk Module Zip
         run: |
