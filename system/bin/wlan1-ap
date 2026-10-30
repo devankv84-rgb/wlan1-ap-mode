@@ -34,6 +34,7 @@ dhcp-range=192.168.42.10,192.168.42.50,12h
 dhcp-option=3,192.168.42.1
 dhcp-option=6,8.8.8.8
 bind-interfaces
+user=root
 pid-file=/data/local/tmp/wlan1_ap/dnsmasq.pid
 CONF
     fi
@@ -100,4 +101,4 @@ case "$1" in
         echo "Usage: wlan1-ap {start|stop}"
         exit 1
         ;;
-esac
+es:
