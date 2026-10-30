@@ -1,0 +1,28 @@
+name: Build wlan1 AP Magisk Module
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set Executable Permissions
+        run: |
+          chmod +x service.sh
+          chmod +x system/bin/wlan1-ap
+
+      - name: Package Magisk Module Zip
+        run: |
+          zip -r wlan1_ap_magisk.zip module.prop service.sh system/
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: wlan1_ap_magisk
+          path: wlan1_ap_magisk.zip
