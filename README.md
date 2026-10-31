@@ -1,1 +1,0 @@
-# wlan1-ap-mode
