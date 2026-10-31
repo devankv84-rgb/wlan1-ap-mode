@@ -1,6 +1,0 @@
-id=wlan1_ap_helper
-name=wlan1 External Wi-Fi AP Helper
-version=v1.0
-versionCode=1
-author=NetHunter
-description=Automates AP mode, IPTables routing, and DHCP configuration for external USB Wi-Fi (wlan1).
